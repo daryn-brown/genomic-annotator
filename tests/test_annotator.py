@@ -1,11 +1,13 @@
 """Mock-only batching, response-shape, failure and request-privacy tests."""
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
 from typing import Any, Dict, List
 from unittest.mock import Mock, patch
+from urllib.parse import parse_qs
 
 import pandas as pd
 import requests
@@ -400,6 +402,81 @@ class AnnotatorTests(unittest.TestCase):
         self.assertTrue(annotator.warnings)
         annotator.annotate(genome([]))
         self.assertEqual(annotator.warnings, [])
+
+
+class TransportPrivacyTests(unittest.TestCase):
+    """Inspect real prepared requests while intercepting the final HTTP adapter."""
+
+    def test_prepared_requests_exclude_cookies_netrc_proxies_and_personal_fields(self) -> None:
+        """Exercise requests' actual preparation, not just mock the Session.post API."""
+        with tempfile.TemporaryDirectory() as directory:
+            home = Path(directory)
+            netrc = home / ".netrc"
+            netrc.write_text(
+                "machine myvariant.info login SYNTHETIC_PRIVATE_USER "
+                "password NEVER_SEND_SYNTHETIC_PASSWORD\n",
+                encoding="utf-8",
+            )
+            netrc.chmod(0o600)
+            session = requests.Session()
+            self.addCleanup(session.close)
+            session.cookies.set("tracking", "SYNTHETIC_PRIVATE_COOKIE", domain="myvariant.info")
+            prepared_queries: List[str] = []
+
+            def intercept_send(
+                adapter: requests.adapters.HTTPAdapter,
+                prepared: requests.PreparedRequest,
+                **kwargs: Any,
+            ) -> requests.Response:
+                """Assert the final outbound shape and return local JSON only."""
+                self.assertEqual(prepared.method, "POST")
+                self.assertEqual(prepared.url, API_URL)
+                self.assertEqual(prepared.headers["Content-Type"], "application/x-www-form-urlencoded")
+                form = parse_qs(prepared.body)
+                self.assertEqual(set(form), {"q", "scopes", "fields"})
+                self.assertEqual(form["scopes"], ["dbsnp.rsid"])
+                self.assertEqual(form["fields"], [API_FIELDS])
+                self.assertNotIn("Cookie", prepared.headers)
+                self.assertNotIn("Authorization", prepared.headers)
+                self.assertNotIn("Proxy-Authorization", prepared.headers)
+                self.assertEqual(kwargs["timeout"], HTTP_TIMEOUT)
+                self.assertIs(kwargs["verify"], True)
+                self.assertEqual(kwargs["proxies"], {})
+                identifiers = form["q"][0].split(",")
+                self.assertTrue(all(identifier.startswith("rs") and identifier[2:].isascii() and identifier[2:].isdigit() for identifier in identifiers))
+                outbound = repr((prepared.url, prepared.headers, prepared.body, kwargs))
+                for private in ["SYNTHETIC_PRIVATE", "NEVER_SEND", "987654", "DO_NOT_SEND", "genotype", "chromosome", "position"]:
+                    self.assertNotIn(private, outbound)
+                prepared_queries.extend(identifiers)
+                session.cookies.set("tracking", "SYNTHETIC_PRIVATE_RESPONSE_COOKIE", domain="myvariant.info")
+                local_response = requests.Response()
+                local_response.status_code = 200
+                local_response._content = json.dumps([hit(rsid) for rsid in identifiers]).encode("utf-8")
+                local_response._content_consumed = True
+                local_response.encoding = "utf-8"
+                local_response.request = prepared
+                local_response.url = API_URL
+                return local_response
+
+            environment = {
+                "HOME": directory,
+                "HTTPS_PROXY": "http://unused.invalid:3128",
+                "HTTP_PROXY": "http://unused.invalid:3128",
+                "ALL_PROXY": "http://unused.invalid:3128",
+                "REQUESTS_CA_BUNDLE": "/SYNTHETIC_PRIVATE_CA_FILE_DO_NOT_USE",
+            }
+            with patch.dict(os.environ, environment):
+                with AnnotationCache(home / "isolated.db") as cache:
+                    original = genome([f"rs{i + 1}" for i in range(51)] + ["i100", "rs1"])
+                    original["name"] = "SYNTHETIC_PRIVATE_PERSON"
+                    original["file_path"] = "/SYNTHETIC_PRIVATE_PATH/DO_NOT_SEND"
+                    with patch("genomic_annotator.annotator.requests.Session", return_value=session):
+                        with patch("requests.adapters.HTTPAdapter.send", autospec=True, side_effect=intercept_send) as send:
+                            result = VariantAnnotator(cache).annotate(original)
+            self.assertEqual(send.call_count, 2)
+            self.assertEqual(prepared_queries, [f"rs{i + 1}" for i in range(51)])
+            self.assertEqual(len(result), len(original))
+            self.assertFalse(session.trust_env)
 
 
 if __name__ == "__main__":
