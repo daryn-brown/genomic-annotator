@@ -1,0 +1,11 @@
+# COMPLETELY SYNTHETIC calls and positions. Not a person, not clinical data.
+# Identifier numbers are illustrative; annotation labels must not be inferred.
+# rsid	chromosome	position	genotype
+rs101	1	10101	AG
+rs102	X	20202	A
+rs103	MT	30303	T
+i900001	2	40404	II
+rs101	1	10101	AG
+rs104	Y	50505	D
+rs105	22	60606	--
+rs106	1	70707	00
