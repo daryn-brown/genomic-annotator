@@ -80,6 +80,8 @@ class WebTests(unittest.TestCase):
         for path, content_type in [
             ("/", "text/html"),
             ("/static/workspace.css", "text/css"),
+            ("/static/theme.css", "text/css"),
+            ("/static/theme.js", "javascript"),
             ("/static/workspace.mjs", "javascript"),
             ("/static/model.mjs", "javascript"),
             ("/static/mark.svg", "image/svg+xml"),
@@ -99,6 +101,10 @@ class WebTests(unittest.TestCase):
         self.assertNotIn("<style>", html)
         self.assertNotIn('src="http', html)
         self.assertNotIn('href="http', html)
+        self.assertIn('<script src="/static/theme.js"></script>', html)
+        self.assertLess(html.index('src="/static/theme.js"'), html.index('rel="stylesheet"'))
+        self.assertIn('<meta name="color-scheme" content="light dark">', html)
+        self.assertIn('id="theme-select"', html)
         self.assertFalse(self.cache_path.exists())
         self.network_guard.assert_not_called()
 
@@ -356,9 +362,9 @@ class WebTests(unittest.TestCase):
         self.assertIn("&lt;img", path.read_text())
 
     @unittest.skipUnless(shutil.which("node"), "Node is optional; needed for native UI model tests")
-    def test_native_ui_geometry_and_display_contracts(self) -> None:
+    def test_native_ui_geometry_display_and_theme_contracts(self) -> None:
         result = subprocess.run(
-            ["node", "--test", "tests/ui_model.test.mjs"],
+            ["node", "--test", "tests/ui_model.test.mjs", "tests/ui_theme.test.mjs"],
             cwd=Path(__file__).resolve().parents[1], capture_output=True, text=True, timeout=20,
         )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

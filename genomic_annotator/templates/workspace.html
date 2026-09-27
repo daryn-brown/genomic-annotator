@@ -4,10 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="workspace-token" content="{{ token }}">
-  <meta name="color-scheme" content="light">
+  <meta name="color-scheme" content="light dark">
   <title>Helix | Local genome workspace</title>
+  <script src="/static/theme.js"></script>
   <link rel="icon" href="/static/mark.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/workspace.css">
+  <link rel="stylesheet" href="/static/theme.css">
   <script type="module" src="/static/workspace.mjs"></script>
 </head>
 <body>
@@ -30,6 +32,8 @@
       <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
       <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></symbol>
       <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 13.1A8.5 8.5 0 0 1 10.9 3.5a8.5 8.5 0 1 0 9.6 9.6Z"/></symbol>
     </defs>
   </svg>
 
@@ -46,6 +50,15 @@
       </nav>
       <div class="topbar-end">
         <span class="local-indicator"><span class="status-dot"></span>Local workspace</span>
+        <label class="theme-control" for="theme-select">
+          <svg class="icon" aria-hidden="true"><use id="theme-icon" href="#i-sun"/></svg>
+          <span id="theme-label" class="sr-only">Color theme</span>
+          <select id="theme-select" aria-labelledby="theme-label" title="Color theme">
+            <option value="system">System</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </label>
         <button class="privacy-button" data-dialog="privacy-dialog">
           <svg class="icon"><use href="#i-shield"/></svg><span>Private by design</span>
         </button>
@@ -63,6 +76,7 @@
       </div>
     </div>
 
+    <div id="theme-notice" class="theme-notice" role="status" hidden></div>
     <div id="operation-banner" class="operation-banner" role="status" hidden>
       <span class="spinner"></span><span id="operation-text"></span>
     </div>
@@ -236,7 +250,7 @@
     <button class="dialog-close icon-button" data-close aria-label="Close"><svg class="icon"><use href="#i-close"/></svg></button>
     <div class="dialog-icon"><svg class="icon"><use href="#i-shield"/></svg></div>
     <div class="eyebrow">PRIVATE BY DESIGN</div><h2 id="privacy-title">Your data stays yours.</h2>
-    <div class="guide-item"><span>01</span><div><h3>Local means local</h3><p>This workspace is served on 127.0.0.1, not on your network. No analytics, remote fonts, CDNs or browser storage. Imported rows live in server memory until you close the file or stop the server. Reloading the page reconnects to the same session.</p></div></div>
+    <div class="guide-item"><span>01</span><div><h3>Local means local</h3><p>This workspace is served on 127.0.0.1, not on your network. No analytics, remote fonts or CDNs. Only your light/dark appearance preference is saved in browser local storage, never genome data. Imported rows live in server memory until you close the file or stop the server. Reloading the page reconnects to the same session.</p></div></div>
     <div class="guide-item"><span>02</span><div><h3>Offline comes first</h3><p>Importing only consults your existing local cache. A cache miss is missing information, never a benign result. Online lookup requires explicit consent for each run and shares RSIDs plus connection metadata with MyVariant.info.</p></div></div>
     <div class="guide-item"><span>03</span><div><h3>Know what remains</h3><p>Public annotations and queried RSID keys persist in the CLI's cache. Private reports persist only when you save them. Closing a tab removes its genome rows from this server, not the original file, cache or reports. This is not guaranteed secure memory or disk erasure.</p></div></div>
   </dialog>

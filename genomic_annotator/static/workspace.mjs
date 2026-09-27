@@ -242,7 +242,7 @@ function renderMap() {
     row.append(element("span", "", `chr${segment.name}`));
     const track = svg("svg", { viewBox: "0 0 200 12", preserveAspectRatio: "none", "aria-hidden": "true" });
     track.append(
-      svg("rect", { width: 200, height: 12, rx: 4, fill: "#ecf1ed" }),
+      svg("rect", { width: 200, height: 12, rx: 4, fill: "var(--map-track)" }),
       svg("rect", { width: Math.max(3, segment.count / largest * 200), height: 12, rx: 4, fill: segment.color }),
     );
     row.append(track, element("span", "", formatNumber(segment.count)));
@@ -257,7 +257,7 @@ function renderMap() {
   const cx = 340, cy = 277;
   for (const radius of [151, 176, 233]) {
     map.append(svg("circle", {
-      cx, cy, r: radius, fill: "none", stroke: "#e0e7e1", "stroke-width": .65,
+      cx, cy, r: radius, fill: "none", stroke: "var(--map-grid)", "stroke-width": .65,
       ...(radius === 151 ? { "stroke-dasharray": "1 5" } : {}),
     }));
   }
@@ -295,7 +295,7 @@ function renderMap() {
       }));
     });
     group.append(svg("path", {
-      d: arcPath(cx, cy, 162, 166, segment.start, segment.end), fill: "#e8ede7",
+      d: arcPath(cx, cy, 162, 166, segment.start, segment.end), fill: "var(--map-track)",
     }));
     if (segment.annotated) {
       group.append(svg("path", {
@@ -311,11 +311,11 @@ function renderMap() {
   }
   const current = segments.find(segment => segment.name === state.chromosome);
   map.append(
-    svg("circle", { cx, cy, r: 121, fill: "#f8faf7", stroke: "#eaf0e6", "stroke-width": .7 }),
+    svg("circle", { cx, cy, r: 121, fill: "var(--map-center)", stroke: "var(--map-center-border)", "stroke-width": .7 }),
     svg("text", { x: cx, y: cy - 41, class: "map-center-eyebrow" }, current ? `CHROMOSOME ${current.name}` : "YOUR GENOME"),
     svg("text", { x: cx, y: cy + 2, class: "map-center-count" }, formatNumber(current?.count ?? dataset.row_count)),
     svg("text", { x: cx, y: cy + 24, class: "map-center-label" }, "called variants"),
-    svg("line", { x1: cx - 15, x2: cx + 15, y1: cy + 43, y2: cy + 43, stroke: "#c8d6c4", "stroke-width": 1 }),
+    svg("line", { x1: cx - 15, x2: cx + 15, y1: cy + 43, y2: cy + 43, stroke: "var(--map-divider)", "stroke-width": 1 }),
     svg("text", { x: cx, y: cy + 63, class: "map-center-note" }, current ? `${formatNumber(current.annotated)} with annotations` : `${segments.length} chromosomes \u00b7 one local workspace`),
     svg("text", { x: cx, y: 548, class: "map-center-note" }, "Observed input positions \u00b7 not to scale"),
   );
@@ -328,8 +328,8 @@ function renderMap() {
       const [tx, ty] = polar(cx, cy, 268, angle);
       const marker = svg("g", { class: "selection-marker", "aria-hidden": "true" });
       marker.append(
-        svg("line", { x1, y1, x2, y2, stroke: "#008d89", "stroke-width": 1 }),
-        svg("circle", { cx: x2, cy: y2, r: 3, fill: "#008d89", stroke: "#f7f9f8", "stroke-width": 1.5 }),
+        svg("line", { x1, y1, x2, y2, stroke: "var(--teal)", "stroke-width": 1 }),
+        svg("circle", { cx: x2, cy: y2, r: 3, fill: "var(--teal)", stroke: "var(--surface)", "stroke-width": 1.5 }),
         svg("text", { x: tx, y: ty, "text-anchor": tx < cx - 20 ? "end" : tx > cx + 20 ? "start" : "middle" },
           state.selected.rsid.length > 18 ? `${state.selected.rsid.slice(0, 16)}...` : state.selected.rsid),
       );

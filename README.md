@@ -61,6 +61,12 @@ The demo does not read or write the user's cache and cannot query its IDs online
   map and opens the inspector. Search and status/classification filters
   intersect. Results are paginated in input order; duplicates are not removed.
   Press `/` to focus search, or use the up/down arrows within the variant list.
+- **Appearance:** choose **Light**, **Dark**, or **System** in the top bar.
+  System is the default and follows your operating system, including changes
+  while the workspace is open. An explicit light/dark choice is remembered for
+  this browser origin and synchronized between its windows. Returning to System
+  removes that saved choice. Switching themes preserves the selected variant,
+  filters and open files; it does not trigger annotation or network requests.
 - **Read the map:** equal-sized segments represent observed chromosomes; radial
   bars show variant density and the inner colored band shows annotation
   coverage. Positions are normalized to each chromosome's **maximum observed
@@ -87,8 +93,12 @@ missing annotation into a benign label.
 
 ### Browser session privacy
 
-Genome rows and the search index live in the local server's memory. There is
-no browser local storage, session storage, IndexedDB or automatic genome save.
+Genome rows and the search index live in the local server's memory. The only
+browser local-storage entry is `helix-theme`, containing `light` or `dark` when
+you explicitly choose one. Genome data, filenames, searches and access tokens
+are never stored there. There is no session storage, IndexedDB or automatic
+genome save. If the browser blocks preference storage, an explicit notice
+explains that appearance changes apply only to the current tab.
 Responses use `Cache-Control: no-store`; bundled scripts have a same-origin
 Content Security Policy. API requests require a random per-process token;
 untrusted Host headers and cross-origin requests are rejected, and normal HTTP
@@ -304,8 +314,9 @@ escaping/classification/report permissions, native JavaScript filtering and CLI
 help/annotation/export/cache/error paths. Browser tests additionally cover raw
 memory-only imports, same-origin/token/Host guards, strict JSON nulls, bounded
 jobs/uploads/pagination, intersecting filters, fictional demo isolation, consent,
-partial results, private exports and map geometry. These also use only disposable
-caches and mocked network edges.
+partial results, private exports, map geometry and theme preference behavior
+(system changes, persistence, cross-window synchronization and blocked storage).
+These also use only disposable caches and mocked network edges.
 
 ## Files
 
