@@ -2,13 +2,14 @@
 
 import re
 from pathlib import Path
-from typing import List, Tuple
+from typing import Iterable, List, Optional, Tuple
 
 import pandas as pd
 
 
 GENOME_COLUMNS: List[str] = ["rsid", "chromosome", "position", "genotype"]
-CHROMOSOMES = frozenset([str(number) for number in range(1, 23)] + ["X", "Y", "MT"])
+CHROMOSOME_ORDER = tuple([str(number) for number in range(1, 23)] + ["X", "Y", "MT"])
+CHROMOSOMES = frozenset(CHROMOSOME_ORDER)
 MAX_POSITION = 2_147_483_647
 IDENTIFIER_PATTERN = re.compile(r"(?:rs|i)[0-9]+")
 RSID_PATTERN = re.compile(r"rs[0-9]+")
@@ -76,47 +77,62 @@ def parse_23andme(file_path: str) -> pd.DataFrame:
     except (OSError, ValueError, RuntimeError) as exc:
         raise GenomeFileError(f"Cannot open input file: {exc}") from exc
 
-    rows: List[Tuple[str, str, int, str]] = []
-    first_record = True
     try:
         with handle:
-            for line_number, raw_line in enumerate(handle, start=1):
-                line = raw_line.rstrip("\r\n")
-                if not line.strip() or line.lstrip().startswith("#"):
-                    continue
-                fields = [field.strip() for field in line.split("\t")]
-                if first_record and fields == GENOME_COLUMNS:
-                    first_record = False
-                    continue
-                first_record = False
-                if len(fields) != 4:
-                    raise GenomeParseError(
-                        f"Line {line_number}: expected 4 tab-separated columns; "
-                        f"found {len(fields)}."
-                    )
-                rsid, chromosome, position_text, genotype = fields
-                if IDENTIFIER_PATTERN.fullmatch(rsid) is None:
-                    raise GenomeParseError(
-                        f"Line {line_number}: identifier must match rs[0-9]+ "
-                        "or i[0-9]+."
-                    )
-                if chromosome not in CHROMOSOMES:
-                    raise GenomeParseError(
-                        f"Line {line_number}: chromosome must be 1-22, X, Y or MT."
-                    )
-                position = _parse_position(position_text, line_number)
-                if genotype in {"--", "00"}:
-                    continue
-                if GENOTYPE_PATTERN.fullmatch(genotype) is None:
-                    raise GenomeParseError(
-                        f"Line {line_number}: genotype must be one or two "
-                        "uppercase A/C/G/T bases or I/D indel symbols "
-                        "(uncalled values: --, 00)."
-                    )
-                rows.append((rsid, chromosome, position, genotype))
+            return parse_23andme_stream(handle)
     except (OSError, UnicodeError) as exc:
         raise GenomeFileError(f"Cannot read input file as UTF-8: {exc}") from exc
 
+
+def parse_23andme_stream(
+    lines: Iterable[str], *, max_rows: Optional[int] = None
+) -> pd.DataFrame:
+    """Apply the same strict parser to decoded lines without saving an upload.
+
+    ``max_rows`` optionally bounds called rows for memory-limited consumers.
+    The caller owns the stream and its decoding/IO lifecycle.
+    """
+    if max_rows is not None and (type(max_rows) is not int or max_rows < 1):
+        raise ValueError("max_rows must be a positive integer.")
+    rows: List[Tuple[str, str, int, str]] = []
+    first_record = True
+    for line_number, raw_line in enumerate(lines, start=1):
+        if line_number == 1:
+            raw_line = raw_line.removeprefix("\ufeff")
+        line = raw_line.rstrip("\r\n")
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        fields = [field.strip() for field in line.split("\t")]
+        if first_record and fields == GENOME_COLUMNS:
+            first_record = False
+            continue
+        first_record = False
+        if len(fields) != 4:
+            raise GenomeParseError(
+                f"Line {line_number}: expected 4 tab-separated columns; "
+                f"found {len(fields)}."
+            )
+        rsid, chromosome, position_text, genotype = fields
+        if IDENTIFIER_PATTERN.fullmatch(rsid) is None:
+            raise GenomeParseError(
+                f"Line {line_number}: identifier must match rs[0-9]+ or i[0-9]+."
+            )
+        if chromosome not in CHROMOSOMES:
+            raise GenomeParseError(
+                f"Line {line_number}: chromosome must be 1-22, X, Y or MT."
+            )
+        position = _parse_position(position_text, line_number)
+        if genotype in {"--", "00"}:
+            continue
+        if GENOTYPE_PATTERN.fullmatch(genotype) is None:
+            raise GenomeParseError(
+                f"Line {line_number}: genotype must be one or two "
+                "uppercase A/C/G/T bases or I/D indel symbols "
+                "(uncalled values: --, 00)."
+            )
+        rows.append((rsid, chromosome, position, genotype))
+        if max_rows is not None and len(rows) > max_rows:
+            raise GenomeParseError(f"Input exceeds the browser limit of {max_rows:,} called rows.")
     if not rows:
         raise EmptyGenomeError("Input contains no called variants.")
     return pd.DataFrame(rows, columns=GENOME_COLUMNS)

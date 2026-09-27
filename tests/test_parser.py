@@ -2,6 +2,7 @@
 
 import tempfile
 import unittest
+from io import StringIO
 from pathlib import Path
 
 import pandas as pd
@@ -13,6 +14,7 @@ from genomic_annotator.parser import (
     GenomeFileError,
     GenomeParseError,
     parse_23andme,
+    parse_23andme_stream,
 )
 
 
@@ -171,6 +173,21 @@ class ParserTests(unittest.TestCase):
         self.path.write_bytes(b"rs101\t1\t1\tAA\n\xff")
         with self.assertRaisesRegex(GenomeFileError, "UTF-8"):
             parse_23andme(str(self.path))
+
+    def test_stream_parser_matches_file_parser_without_closing_the_stream(self) -> None:
+        text = "\ufeff# synthetic\r\nrs101\t1\t1\tAG\r\nrs101\t1\t1\tAG\r\n"
+        stream = StringIO(text)
+        pd.testing.assert_frame_equal(parse_23andme_stream(stream), self.parse(text))
+        self.assertFalse(stream.closed)
+
+    def test_stream_limit_counts_called_rows_and_keeps_validation_strict(self) -> None:
+        frame = parse_23andme_stream(StringIO("rs101\t1\t1\t--\nrs102\t1\t2\tAA\n"), max_rows=1)
+        self.assertEqual(len(frame), 1)
+        with self.assertRaisesRegex(GenomeParseError, "1 called rows"):
+            parse_23andme_stream(StringIO("rs101\t1\t1\tAA\nrs102\t1\t2\tCC\n"), max_rows=1)
+        for limit in [0, -1, True, 1.5]:
+            with self.subTest(limit=limit), self.assertRaises(ValueError):
+                parse_23andme_stream(StringIO("rs101\t1\t1\tAA\n"), max_rows=limit)
 
 
 if __name__ == "__main__":
