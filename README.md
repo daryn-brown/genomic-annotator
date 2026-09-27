@@ -1,8 +1,10 @@
 # Local genomic annotator
 
-A privacy-first Python CLI for reading a **local 23andMe raw TSV**, looking up
-public RSID annotations through a local cache and, optionally, MyVariant.info,
-and producing a terminal table or a standalone searchable HTML report.
+A privacy-first **local browser workspace and Python CLI** for reading a
+**23andMe raw TSV**, looking up public RSID annotations through a local cache
+and, optionally, MyVariant.info. Explore called variants on an interactive
+chromosome map, inspect linked annotations, or produce a terminal table or a
+standalone searchable HTML report.
 
 **Research only; not diagnostic.** An RSID can describe multiple alleles, with
 different clinical interpretations. This tool does **not** match the user's
@@ -11,26 +13,121 @@ personal risk, carrier status or treatment decisions from an RSID match.
 Personal medical conclusions require allele-aware clinical confirmation.
 Colors describe public annotation labels, not the individual's health.
 
+## Workspace previews
+
+Both screenshots show the bundled **synthetic demo**, not personal genome data.
+Use the top-bar appearance control to choose Light, Dark, or your system theme.
+
+### Light
+
+![Helix in light mode, showing the chromosome map, linked variant browser, and annotation inspector with synthetic data.](docs/images/workspace-light.png)
+
+### Dark
+
+![Helix in dark mode, showing the same synthetic genome with dark panels, pastel chromosome tracks, and readable genotype calls.](docs/images/workspace-dark.png)
+
 ## Installation
 
 Use Python 3.10 or newer with an OpenSSL-backed HTTPS implementation. Create a
-local virtual environment and install the five declared dependencies:
+local virtual environment and install the six declared dependencies:
 
 ```sh
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python main.py --help
+.venv/bin/python main.py ui
 ```
 
 Substitute an appropriate interpreter if your system `python3` is older.
 The prepared environment in this workspace uses **Python 3.14.6**, created with
 `python3.14 -m venv .venv`. On Windows, use `.venv\Scripts\python.exe`.
 
-Runtime dependencies: pandas, requests, Typer, Rich and Jinja2. SQLite and the
-test runner come with Python. Node is optional and used only by a test that
-executes the report's native JavaScript; it is not needed to use the application.
+Runtime dependencies: pandas, requests, Typer, Rich, Jinja2 and Flask. SQLite and
+the test runner come with Python. There is no frontend build step. Node is
+optional and used only by native JavaScript tests; it is not needed to use the
+application.
 
-## Usage
+## Browser workspace
+
+```sh
+# Start the local server and open the UI in your default browser.
+.venv/bin/python main.py ui
+
+# Choose another port or open the printed local URL yourself.
+.venv/bin/python main.py ui --port 8877 --no-browser
+```
+
+The **Helix** workspace runs at `http://127.0.0.1:8765`, bound only to IPv4
+loopback. There is no remote bind option, debugger, reloader, telemetry, CDN,
+external font or asset request. Stop it with **Ctrl+C** in the terminal.
+If the port is already in use, choose another with `--port`; do not stop an
+unrelated process.
+
+On first opening, the workspace shows a clearly labeled **synthetic demo**.
+Its genotypes, positions and annotations are fictional, not biological findings.
+The demo does not read or write the user's cache and cannot query its IDs online.
+
+- **Open genome:** choose or drop a 23andMe `.txt`/`.tsv`. Imports always use the
+  existing local annotation cache **offline**, without creating an HTTP session.
+  This differs deliberately from the CLI's online-by-default `annotate` command.
+- **Explore:** click a chromosome segment or use the chromosome-list view to
+  filter the variant browser. Selecting a row links its input position to the
+  map and opens the inspector. Search and status/classification filters
+  intersect. Results are paginated in input order; duplicates are not removed.
+  Press `/` to focus search, or use the up/down arrows within the variant list.
+- **Appearance:** choose **Light**, **Dark**, or **System** in the top bar.
+  System is the default and follows your operating system, including changes
+  while the workspace is open. An explicit light/dark choice is remembered for
+  this browser origin and synchronized between its windows. Returning to System
+  removes that saved choice. Switching themes preserves the selected variant,
+  filters and open files; it does not trigger annotation or network requests.
+- **Read the map:** equal-sized segments represent observed chromosomes; radial
+  bars show variant density and the inner colored band shows annotation
+  coverage. Positions are normalized to each chromosome's **maximum observed
+  input position**, not to reference chromosome lengths. Map colors distinguish
+  chromosomes, not health or risk. Genotype chips are original calls, **not a
+  reconstructed DNA sequence or plasmid editor**. No build is inferred.
+- **Online lookup:** separately opt in to querying distinct uncached RSIDs for
+  the active file. The confirmation explains RSID and connection-metadata
+  disclosure. Cache-first lookups run in the background in batches of 50; large
+  genomes can take a long time. The previous snapshot remains browsable until
+  completion. Partial results and warnings are displayed explicitly. This is
+  not a cache refresh; cached entries can be stale.
+- **Save report:** enter a new local HTML filename in an existing directory.
+  The same private, no-overwrite exporter as the CLI saves **all called rows in
+  the active file**, not just the visible page or current filters. New files
+  have owner-only permissions (`0600` on POSIX). Reports are sensitive.
+
+The browser workspace supports **three open files**, each up to **32 MiB** and
+**1,000,000 called rows**, with one import/online lookup at a time. Larger inputs
+remain supported by the CLI. Raw uploads are parsed directly from memory, not
+spooled to temporary files, and malformed records reject the whole import.
+An errored file can be closed and reimported. Import/lookup errors never turn
+missing annotation into a benign label.
+
+### Browser session privacy
+
+Genome rows and the search index live in the local server's memory. The only
+browser local-storage entry is `helix-theme`, containing `light` or `dark` when
+you explicitly choose one. Genome data, filenames, searches and access tokens
+are never stored there. There is no session storage, IndexedDB or automatic
+genome save. If the browser blocks preference storage, an explicit notice
+explains that appearance changes apply only to the current tab.
+Responses use `Cache-Control: no-store`; bundled scripts have a same-origin
+Content Security Policy. API requests require a random per-process token;
+untrusted Host headers and cross-origin requests are rejected, and normal HTTP
+request logging is disabled so searches and filenames are not written to logs.
+
+All browser windows connected to the **same server share its open files**.
+Reloading reconnects to that in-memory session. Close a **file tab inside the
+workspace**, or stop the server, to discard its rows. Closing only the browser
+window does **not** stop the server. This is a single-user local tool, not a
+multi-user authentication boundary against other software/users on the machine,
+and it does not guarantee secure memory erasure or prevent OS swap/backups.
+Original files, saved reports and the annotation cache are not deleted when a
+file tab closes. Only public annotations/RSID cache keys are persisted by
+lookups; the cache itself also deserves privacy.
+
+## CLI usage
 
 ```sh
 # Strict cache-only operation: zero HTTP, including when annotations are missing.
@@ -227,12 +324,20 @@ Tests cover parser validation, cache lifecycle/raw JSON/upserts, 0/1/50/51
 batching, query-only privacy, cache/deduplication, multiple response shapes,
 outages, no-hit/no-details distinctions, no-network offline operation,
 escaping/classification/report permissions, native JavaScript filtering and CLI
-help/annotation/export/cache/error paths.
+help/annotation/export/cache/error paths. Browser tests additionally cover raw
+memory-only imports, same-origin/token/Host guards, strict JSON nulls, bounded
+jobs/uploads/pagination, intersecting filters, fictional demo isolation, consent,
+partial results, private exports, map geometry and theme preference behavior
+(system changes, persistence, cross-window synchronization and blocked storage).
+These also use only disposable caches and mocked network edges.
 
 ## Files
 
 `genomic_annotator/parser.py`, `database.py`, `annotator.py`, `reporter.py` and
-`cli.py` contain the implementation; `__init__.py` defines the package.
+`cli.py` contain the shared annotation/CLI implementation; `web.py` serves the
+local UI and bounded in-memory workspace, `demo.py` builds fictional preview
+data, and `templates/` and `static/` contain the bundled UI. `__init__.py` defines
+the package.
 `main.py` is the runner, `requirements.txt` declares dependencies and `tests/`
 contains only synthetic test code/fixtures. `.gitignore` excludes environments,
 caches, common raw-genome formats, generated reports and common secret files.

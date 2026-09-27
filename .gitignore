@@ -24,3 +24,4 @@ __pycache__/
 /reports/
 !requirements.txt
 !tests/fixtures/synthetic_23andme.tsv
+!genomic_annotator/templates/*.html
