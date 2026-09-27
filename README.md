@@ -13,6 +13,19 @@ personal risk, carrier status or treatment decisions from an RSID match.
 Personal medical conclusions require allele-aware clinical confirmation.
 Colors describe public annotation labels, not the individual's health.
 
+## Workspace previews
+
+Both screenshots show the bundled **synthetic demo**, not personal genome data.
+Use the top-bar appearance control to choose Light, Dark, or your system theme.
+
+### Light
+
+![Helix in light mode, showing the chromosome map, linked variant browser, and annotation inspector with synthetic data.](docs/images/workspace-light.png)
+
+### Dark
+
+![Helix in dark mode, showing the same synthetic genome with dark panels, pastel chromosome tracks, and readable genotype calls.](docs/images/workspace-dark.png)
+
 ## Installation
 
 Use Python 3.10 or newer with an OpenSSL-backed HTTPS implementation. Create a
