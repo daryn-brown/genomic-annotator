@@ -49,7 +49,7 @@ class CLITests(unittest.TestCase):
 
     def test_help_for_app_and_commands(self) -> None:
         """Top-level and command help must work without reading files or networking."""
-        for args in [["--help"], ["annotate", "--help"], ["clear-cache", "--help"]]:
+        for args in [["--help"], ["annotate", "--help"], ["clear-cache", "--help"], ["ui", "--help"]]:
             with self.subTest(args=args):
                 result = self.runner.invoke(app, args)
                 self.assertEqual(result.exit_code, 0, result.output)
@@ -225,6 +225,18 @@ class CLITests(unittest.TestCase):
                 self.assertEqual(result.exit_code, 2)
         self.assertFalse(self.cache_path.exists())
         self.real_request_guard.assert_not_called()
+
+    def test_ui_launch_options_and_errors(self) -> None:
+        with patch("genomic_annotator.web.serve_workspace") as serve:
+            result = self.runner.invoke(app, ["ui", "--no-browser", "--port", "8877"])
+            self.assertEqual(result.exit_code, 0, result.output)
+            serve.assert_called_once_with(port=8877, open_browser=False)
+        for port in ["0", "1023", "65536", "invalid"]:
+            self.assertEqual(self.runner.invoke(app, ["ui", "--port", port]).exit_code, 2)
+        with patch("genomic_annotator.web.serve_workspace", side_effect=OSError("synthetic port failure")):
+            result = self.runner.invoke(app, ["ui", "--no-browser"])
+            self.assertEqual(result.exit_code, 1)
+            self.assertIn("Cannot start the local workspace", result.output)
 
 
 if __name__ == "__main__":

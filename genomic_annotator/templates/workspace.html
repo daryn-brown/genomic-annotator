@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="workspace-token" content="{{ token }}">
+  <meta name="color-scheme" content="light">
+  <title>Helix | Local genome workspace</title>
+  <link rel="icon" href="/static/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/workspace.css">
+  <script type="module" src="/static/workspace.mjs"></script>
+</head>
+<body>
+  <svg class="icon-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/></symbol>
+      <symbol id="i-import" viewBox="0 0 24 24"><path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5M12 16V3m-5 5 5-5 5 5"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3M12 3v13m-5-5 5 5 5-5"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="7"/><path d="m16 16 5 5"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6Z"/><path d="m8 12 3 3 5-6"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.1"/></symbol>
+      <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="10" cy="18" r="2"/></symbol>
+      <symbol id="i-left" viewBox="0 0 24 24"><path d="m14 6-6 6 6 6"/></symbol>
+      <symbol id="i-right" viewBox="0 0 24 24"><path d="m10 6 6 6-6 6"/></symbol>
+      <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4V1m8 11h3M12 20v3M4 12H1"/></symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24"><path d="M5 4h4v6H5zm10 0h4v6h-4zM5 14h4v6H5zm10 0h4v6h-4z"/></symbol>
+      <symbol id="i-fit" viewBox="0 0 24 24"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/></symbol>
+      <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    </defs>
+  </svg>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <a href="/" class="brand" aria-label="Helix genome workspace">
+        <img src="/static/mark.svg" width="31" height="31" alt="">
+        <span>helix<span class="brand-period">.</span></span>
+      </a>
+      <span class="brand-divider"></span>
+      <nav aria-label="Main navigation">
+        <span class="nav-item active" aria-current="page">Workspace</span>
+        <button class="nav-item" data-dialog="about-dialog">Guide</button>
+      </nav>
+      <div class="topbar-end">
+        <span class="local-indicator"><span class="status-dot"></span>Local workspace</span>
+        <button class="privacy-button" data-dialog="privacy-dialog">
+          <svg class="icon"><use href="#i-shield"/></svg><span>Private by design</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="tabbar">
+      <div id="file-tabs" class="file-tabs" role="tablist" aria-label="Open genome files"></div>
+      <button class="icon-button add-tab" data-dialog="import-dialog" title="Open a genome file" aria-label="Open a genome file">
+        <svg class="icon"><use href="#i-plus"/></svg>
+      </button>
+      <div class="file-actions">
+        <button class="button subtle" id="export-button" disabled><svg class="icon"><use href="#i-download"/></svg><span>Save report</span></button>
+        <button class="button dark" data-dialog="import-dialog"><svg class="icon"><use href="#i-plus"/></svg><span>Open genome</span></button>
+      </div>
+    </div>
+
+    <div id="operation-banner" class="operation-banner" role="status" hidden>
+      <span class="spinner"></span><span id="operation-text"></span>
+    </div>
+    <div id="file-error" class="file-error" role="alert" hidden></div>
+
+    <main class="workspace">
+      <section class="overview" aria-labelledby="overview-title">
+        <div class="overview-heading">
+          <div>
+            <div class="eyebrow">THE BIG PICTURE</div>
+            <h1 id="overview-title">Genome overview</h1>
+            <p id="overview-subtitle">A little perspective on your genetic data.</p>
+          </div>
+          <div class="view-switch" role="group" aria-label="Map view">
+            <button id="circular-view" class="active" aria-pressed="true" title="Circular map" aria-label="Circular map"><svg class="icon"><use href="#i-circle"/></svg></button>
+            <button id="linear-view" aria-pressed="false" title="Chromosome list" aria-label="Chromosome list"><svg class="icon"><use href="#i-grid"/></svg></button>
+          </div>
+        </div>
+
+        <div class="map-area">
+          <div class="map-toolbar" role="toolbar" aria-label="Workspace tools">
+            <button class="icon-button" data-dialog="import-dialog" title="Open file" aria-label="Open file"><svg class="icon"><use href="#i-import"/></svg></button>
+            <span class="toolbar-divider"></span>
+            <button class="icon-button" id="reset-map" title="Show all chromosomes" aria-label="Show all chromosomes"><svg class="icon"><use href="#i-circle"/></svg></button>
+            <button class="icon-button" id="focus-search" title="Search variants (/)" aria-label="Search variants"><svg class="icon"><use href="#i-search"/></svg></button>
+            <button class="icon-button" id="toolbar-filters" title="Filter annotations" aria-label="Filter annotations"><svg class="icon"><use href="#i-filter"/></svg></button>
+            <span class="toolbar-divider"></span>
+            <button class="icon-button" data-dialog="about-dialog" title="How to read this map" aria-label="How to read this map"><svg class="icon"><use href="#i-info"/></svg></button>
+          </div>
+          <svg id="genome-map" class="genome-map" viewBox="0 0 680 570" role="group" aria-label="Interactive chromosome map"></svg>
+          <div id="chromosome-list" class="chromosome-list" aria-label="Chromosome overview" hidden></div>
+          <div id="empty-workspace" class="empty-workspace" hidden>
+            <span class="empty-mark"><svg class="icon"><use href="#i-file"/></svg></span>
+            <h2>Your genome. Your workspace.</h2>
+            <p>Open a 23andMe raw file to explore your variants.<br>Everything starts locally, with no online lookup.</p>
+            <button class="button dark" data-dialog="import-dialog">Open a genome file</button>
+            <button class="text-button" id="load-demo">Explore the synthetic demo</button>
+          </div>
+          <div class="zoom-controls" id="zoom-controls" role="group" aria-label="Map zoom">
+            <button class="icon-button" id="zoom-in" title="Zoom in" aria-label="Zoom in"><svg class="icon"><use href="#i-plus"/></svg></button>
+            <span id="zoom-value">100%</span>
+            <button class="icon-button" id="zoom-out" title="Zoom out" aria-label="Zoom out"><svg class="icon"><use href="#i-minus"/></svg></button>
+            <button class="icon-button" id="zoom-fit" title="Fit map" aria-label="Fit map"><svg class="icon"><use href="#i-fit"/></svg></button>
+          </div>
+          <div class="map-caption"><span class="tiny-dot"></span><span>Each segment is a chromosome. Click to explore.</span></div>
+        </div>
+
+        <div class="map-summary">
+          <div><strong id="stat-variants">&mdash;</strong><span>called variants</span></div>
+          <span class="summary-divider"></span>
+          <div><strong id="stat-annotated">&mdash;</strong><span>with annotations</span></div>
+          <span class="summary-divider"></span>
+          <div><strong id="stat-chromosomes">&mdash;</strong><span>chromosomes</span></div>
+          <button id="mode-badge" class="mode-badge" data-dialog="privacy-dialog"><svg class="icon"><use href="#i-shield"/></svg><span>Offline first</span></button>
+        </div>
+
+        <section class="inspector" aria-labelledby="inspector-title">
+          <div class="feature-detail">
+            <div class="inspector-topline"><span class="eyebrow" id="inspector-title">VARIANT INSPECTOR</span><span id="selected-category" class="badge unavailable">No selection</span></div>
+            <div class="feature-title"><h2 id="selected-rsid">Select a variant</h2><span id="selected-gene" class="gene-tag" hidden></span></div>
+            <p id="selected-trait" class="trait-text">Choose a row in the variant browser to see its public annotations and local genotype.</p>
+            <p id="selected-message" class="annotation-message">Annotations describe RSIDs, not your personal health.</p>
+          </div>
+          <div class="feature-meta">
+            <dl>
+              <div><dt>Chromosome</dt><dd id="selected-chromosome">&mdash;</dd></div>
+              <div><dt>Position</dt><dd id="selected-position">&mdash;</dd></div>
+              <div><dt>Genotype</dt><dd id="selected-genotype">&mdash;</dd></div>
+              <div><dt>Source</dt><dd id="selected-source">&mdash;</dd></div>
+            </dl>
+            <p>Input coordinates. Reference build and allele matching are not inferred.</p>
+          </div>
+        </section>
+      </section>
+
+      <aside class="variant-panel" aria-labelledby="variants-title">
+        <div class="panel-heading">
+          <div><h2 id="variants-title">Variant browser</h2><span id="variant-total" class="count-badge">0</span></div>
+          <button class="icon-button" id="filter-toggle" aria-expanded="false" aria-controls="filters" title="Show filters" aria-label="Show filters"><svg class="icon"><use href="#i-filter"/></svg></button>
+        </div>
+        <label class="search-box" for="variant-search">
+          <svg class="icon"><use href="#i-search"/></svg>
+          <input id="variant-search" type="search" maxlength="200" placeholder="Search RSID, gene, trait..." autocomplete="off" spellcheck="false">
+          <kbd>/</kbd>
+        </label>
+        <div class="filter-row">
+          <label class="sr-only" for="chromosome-filter">Chromosome</label>
+          <select id="chromosome-filter"><option value="">All chromosomes</option></select>
+          <button class="text-button" id="clear-filters" hidden>Clear filters</button>
+          <span class="local-data-label"><span class="tiny-dot"></span>Local data</span>
+        </div>
+        <div id="filters" class="filters" hidden>
+          <label>Annotation status<select id="status-filter"><option value="">All statuses</option></select></label>
+          <label>Reported classification<select id="category-filter"><option value="">All classifications</option></select></label>
+          <p>Classification labels are not matched to your genotype.</p>
+        </div>
+        <div class="list-heading"><span>VARIANT / INPUT POSITION</span><span>CALL</span></div>
+        <div id="variant-list" class="variant-list" role="list" aria-label="Variants" aria-busy="false"></div>
+        <div id="no-results" class="no-results" hidden>
+          <svg class="icon"><use href="#i-search"/></svg><h3>No matching variants</h3><p>Try a different search or clear your filters.</p><button class="button" id="reset-filters">Clear all filters</button>
+        </div>
+        <div class="pagination">
+          <span id="page-label" role="status">No file open</span>
+          <button class="icon-button" id="previous-page" aria-label="Previous page" disabled><svg class="icon"><use href="#i-left"/></svg></button>
+          <button class="icon-button" id="next-page" aria-label="Next page" disabled><svg class="icon"><use href="#i-right"/></svg></button>
+        </div>
+        <div class="annotation-footer">
+          <div><svg class="icon"><use href="#i-shield"/></svg><span id="annotation-mode">Cache-only annotations</span></div>
+          <button class="text-button" id="online-button" disabled>Online lookup <span aria-hidden="true">&rarr;</span></button>
+        </div>
+        <details id="warnings-box" class="warnings-box" hidden>
+          <summary id="warnings-summary">Annotation notices</summary>
+          <ul id="warnings-list"></ul>
+        </details>
+      </aside>
+    </main>
+
+    <footer class="statusbar">
+      <span><span class="status-dot"></span><span id="workspace-status">Local session</span></span>
+      <span id="demo-label" class="demo-label" hidden>SYNTHETIC DEMO</span>
+      <button data-dialog="about-dialog">Research only &middot; not a diagnosis<svg class="icon"><use href="#i-info"/></svg></button>
+    </footer>
+  </div>
+
+  <dialog id="import-dialog" aria-labelledby="import-title">
+    <button class="dialog-close icon-button" data-close aria-label="Close"><svg class="icon"><use href="#i-close"/></svg></button>
+    <div class="dialog-icon"><svg class="icon"><use href="#i-import"/></svg></div>
+    <div class="eyebrow">A LOCAL-FIRST WORKSPACE</div><h2 id="import-title">Meet your genome.</h2>
+    <p>Open your 23andMe raw data file. We'll read the called variants and check your local annotation cache.</p>
+    <form id="import-form">
+      <label class="drop-zone" id="drop-zone" for="genome-file">
+        <svg class="icon"><use href="#i-file"/></svg><strong id="chosen-file">Choose a file or drop it here</strong><span>23andMe .txt or .tsv &middot; up to 32 MiB / 1,000,000 called rows</span>
+        <input id="genome-file" type="file" accept=".txt,.tsv,text/plain,text/tab-separated-values">
+      </label>
+      <div class="privacy-note"><svg class="icon"><use href="#i-shield"/></svg><span><strong>It stays on this computer.</strong> No genome upload to an external service. Imports are always offline; online RSID lookup is a separate, opt-in step.</span></div>
+      <p id="import-error" class="form-error" role="alert" hidden></p>
+      <button type="submit" class="button dark wide" id="import-submit">Open locally<svg class="icon"><use href="#i-right"/></svg></button>
+    </form>
+  </dialog>
+
+  <dialog id="online-dialog" aria-labelledby="online-title">
+    <button class="dialog-close icon-button" data-close aria-label="Close"><svg class="icon"><use href="#i-close"/></svg></button>
+    <div class="dialog-icon"><svg class="icon"><use href="#i-globe"/></svg></div>
+    <div class="eyebrow">YOU CONTROL WHAT LEAVES</div><h2 id="online-title">Look up public annotations</h2>
+    <p>Query MyVariant.info for distinct, uncached RSIDs in <strong id="online-filename"></strong>. Cached entries are reused; this is not a cache refresh.</p>
+    <div class="notice-card"><strong>RSIDs can be sensitive, too.</strong><p>The service receives queried RSIDs and connection metadata, including your IP address. Your raw file, genotypes, input positions and file name are never sent.</p></div>
+    <p>Lookups run in batches of 50 and may take a long time for a whole genome. You can keep browsing the previous results while the lookup runs. Do not stop the server if you want it to finish.</p>
+    <form id="online-form">
+      <label class="consent"><input type="checkbox" id="online-consent" required><span>I understand and allow these uncached RSIDs to be sent to MyVariant.info.</span></label>
+      <p id="online-error" class="form-error" role="alert" hidden></p>
+      <button type="submit" class="button dark wide" id="online-submit">Start online lookup<svg class="icon"><use href="#i-right"/></svg></button>
+    </form>
+  </dialog>
+
+  <dialog id="export-dialog" aria-labelledby="export-title">
+    <button class="dialog-close icon-button" data-close aria-label="Close"><svg class="icon"><use href="#i-close"/></svg></button>
+    <div class="dialog-icon"><svg class="icon"><use href="#i-download"/></svg></div>
+    <div class="eyebrow">TAKE YOUR RESEARCH WITH YOU</div><h2 id="export-title">Save a private report</h2>
+    <p>Create a standalone, searchable HTML report of <strong>all called rows in this file</strong>, including duplicates, regardless of the current filters.</p>
+    <form id="export-form">
+      <label class="field-label" for="export-path">New local file path</label>
+      <input class="path-input" id="export-path" name="path" value="~/genomic-report.html" required autocomplete="off" spellcheck="false">
+      <p class="field-hint">Use a new filename in an existing folder. Existing files are never replaced. New reports use owner-only permissions on macOS and Linux.</p>
+      <div class="privacy-note"><svg class="icon"><use href="#i-shield"/></svg><span>This report contains sensitive genotype and position data. Keep it private. There are no external assets or network requests in the report.</span></div>
+      <p id="export-error" class="form-error" role="alert" hidden></p>
+      <button type="submit" class="button dark wide" id="export-submit">Save report<svg class="icon"><use href="#i-download"/></svg></button>
+    </form>
+  </dialog>
+
+  <dialog id="privacy-dialog" aria-labelledby="privacy-title">
+    <button class="dialog-close icon-button" data-close aria-label="Close"><svg class="icon"><use href="#i-close"/></svg></button>
+    <div class="dialog-icon"><svg class="icon"><use href="#i-shield"/></svg></div>
+    <div class="eyebrow">PRIVATE BY DESIGN</div><h2 id="privacy-title">Your data stays yours.</h2>
+    <div class="guide-item"><span>01</span><div><h3>Local means local</h3><p>This workspace is served on 127.0.0.1, not on your network. No analytics, remote fonts, CDNs or browser storage. Imported rows live in server memory until you close the file or stop the server. Reloading the page reconnects to the same session.</p></div></div>
+    <div class="guide-item"><span>02</span><div><h3>Offline comes first</h3><p>Importing only consults your existing local cache. A cache miss is missing information, never a benign result. Online lookup requires explicit consent for each run and shares RSIDs plus connection metadata with MyVariant.info.</p></div></div>
+    <div class="guide-item"><span>03</span><div><h3>Know what remains</h3><p>Public annotations and queried RSID keys persist in the CLI's cache. Private reports persist only when you save them. Closing a tab removes its genome rows from this server, not the original file, cache or reports. This is not guaranteed secure memory or disk erasure.</p></div></div>
+  </dialog>
+
+  <dialog id="about-dialog" aria-labelledby="about-title">
+    <button class="dialog-close icon-button" data-close aria-label="Close"><svg class="icon"><use href="#i-close"/></svg></button>
+    <div class="dialog-icon"><svg class="icon"><use href="#i-circle"/></svg></div>
+    <div class="eyebrow">A MAP, NOT A MEDICAL ANSWER</div><h2 id="about-title">A new view of your data.</h2>
+    <p>Helix is the visual workspace for the local genomic annotator. Open a 23andMe raw file, explore chromosomes, and inspect public RSID annotations alongside your original calls.</p>
+    <div class="guide-item"><span>01</span><div><h3>Read the rings</h3><p>Each equally sized segment represents an observed chromosome. Inner bars show variant density. Positions are normalized to that chromosome's maximum observed input position, not reference chromosome lengths. Colors distinguish chromosomes, not health or risk.</p></div></div>
+    <div class="guide-item"><span>02</span><div><h3>Follow a variant</h3><p>Click a chromosome to filter the browser. Select a row to place it on the map and open its inspector. Search and classification/status filters intersect. Rows stay in input order, including duplicates. Genotype letters are calls, not a reconstructed DNA sequence.</p></div></div>
+    <div class="notice-card"><strong>Research only. Not diagnostic.</strong><p>An RSID can describe multiple alleles with different interpretations. This tool does not match your genotype, strand or reference build to an annotated allele. Do not infer disease, personal risk, carrier status or treatment decisions. Personal medical conclusions require allele-aware clinical confirmation.</p></div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" hidden><span id="toast-message"></span><button class="icon-button" id="dismiss-toast" aria-label="Dismiss message"><svg class="icon"><use href="#i-close"/></svg></button></div>
+  <noscript><div class="noscript">This interactive workspace requires JavaScript. The CLI and exported HTML reports remain usable without it.</div></noscript>
+</body>
+</html>

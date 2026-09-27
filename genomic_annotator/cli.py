@@ -23,7 +23,8 @@ app = typer.Typer(
     name="genomic-annotator",
     help=(
         "Research-only local 23andMe annotation; not a diagnosis. Online mode sends only "
-        "RSIDs to MyVariant.info. Use --offline on annotate to prohibit all HTTP."
+        "RSIDs to MyVariant.info. Use --offline on annotate to prohibit all HTTP. "
+        "Run ui for the offline-first local browser workspace."
     ),
     no_args_is_help=True,
     add_completion=False,
@@ -122,6 +123,20 @@ def clear_cache() -> None:
             "Cache clearing is not guaranteed secure erasure of disk backups."
         )
     )
+
+
+@app.command("ui")
+def ui(
+    port: int = typer.Option(8765, "--port", min=1024, max=65535, help="Local loopback port."),
+    browser: bool = typer.Option(True, "--browser/--no-browser", help="Open the workspace in your browser."),
+) -> None:
+    """Open a private, offline-first visual workspace at http://127.0.0.1:8765."""
+    from genomic_annotator.web import serve_workspace
+
+    try:
+        serve_workspace(port=port, open_browser=browser)
+    except OSError as exc:
+        _error(f"Cannot start the local workspace: {exc}", 1)
 
 
 def main() -> None:
